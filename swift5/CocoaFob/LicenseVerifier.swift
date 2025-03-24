@@ -6,99 +6,111 @@
 //  Copyright © 2015 PixelEspresso. All rights reserved.
 //
 
+import Base32
 import Foundation
+import Security
 
-/**
-Verifies CocoaFob registration keys
-*/
+/// Verifies CocoaFob registration keys
 public struct LicenseVerifier {
-  
-  var pubKey: SecKey
-  
-  // MARK: - Initialization
-  
-  /**
+
+    var pubKey: SecKey
+
+    // MARK: - Initialization
+
+    /**
   Initializes key verifier with a public key in PEM format
-  
+
   - parameter publicKeyPEM: String containing PEM representation of the public key
   */
-  public init?(publicKeyPEM: String) {
-    let emptyString = "" as NSString
-    let password = Unmanaged.passUnretained(emptyString as AnyObject)
-    var params = SecItemImportExportKeyParameters(
-      version: UInt32(bitPattern: SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION),
-      flags: SecKeyImportExportFlags.importOnlyOne,
-      passphrase: password,
-      alertTitle: Unmanaged.passUnretained(emptyString),
-      alertPrompt: Unmanaged.passUnretained(emptyString),
-      accessRef: nil,
-      keyUsage: nil,
-      keyAttributes: nil)
-    var keyFormat = SecExternalFormat.formatPEMSequence
-    var keyType = SecExternalItemType.itemTypePublicKey
-    guard let keyData = publicKeyPEM.data(using: String.Encoding.utf8) else { return nil }
-    let keyBytes = [UInt8](keyData)
-    let keyDataCF = CFDataCreate(nil, keyBytes, keyData.count)!
-    var importArray: CFArray? = nil
-    let osStatus = withUnsafeMutablePointer(to: &keyFormat) { pKeyFormat in
-      withUnsafeMutablePointer(to: &keyType, {pKeyType in
-        SecItemImport(keyDataCF, nil, pKeyFormat, pKeyType, SecItemImportExportFlags(rawValue: 0), &params, nil, &importArray)
-      })
+    public init?(publicKeyPEM: String) {
+        let emptyString = "" as NSString
+        let password = Unmanaged.passUnretained(emptyString as AnyObject)
+        var params = SecItemImportExportKeyParameters(
+            version: UInt32(bitPattern: SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION),
+            flags: SecKeyImportExportFlags.importOnlyOne,
+            passphrase: password,
+            alertTitle: Unmanaged.passUnretained(emptyString),
+            alertPrompt: Unmanaged.passUnretained(emptyString),
+            accessRef: nil,
+            keyUsage: nil,
+            keyAttributes: nil
+        )
+        var keyFormat = SecExternalFormat.formatOpenSSL
+        var keyType = SecExternalItemType.itemTypePublicKey
+        guard let keyData = publicKeyPEM.data(using: String.Encoding.utf8) else { return nil }
+        let keyBytes = [UInt8](keyData)
+        guard let keyDataCF = CFDataCreate(nil, keyBytes, keyData.count) else { return nil }
+        var importArray: CFArray? = nil
+        let osStatus = withUnsafeMutablePointer(
+            to: &keyFormat,
+            { pKeyFormat -> OSStatus in
+                withUnsafeMutablePointer(
+                    to: &keyType,
+                    { pKeyType in
+                        SecItemImport(
+                            keyDataCF,
+                            nil,
+                            pKeyFormat,
+                            pKeyType,
+                            SecItemImportExportFlags(rawValue: 0),
+                            &params,
+                            nil,
+                            &importArray
+                        )
+                    }
+                )
+            }
+        )
+        guard osStatus == errSecSuccess,
+              let importArray = importArray,
+              let items = importArray as? [SecKey],
+              let firstKey = items.first else { return nil }
+        self.pubKey = firstKey
     }
-    guard osStatus == errSecSuccess, importArray != nil else { return nil }
-    let items = importArray! as NSArray
-    guard items.count > 0 else { return nil }
-    self.pubKey = items[0] as! SecKey
-  }
-  
-  /**
+
+    /**
   Verifies registration key against registered name. Doesn't throw since you are most likely not interested in the reason registration verification failed.
-  
+
   - parameter regKey: Registration key string
   - parameter name: Registered name string
   - returns: `true` if the registration key is valid for the given name, `false` if not
   */
-  public func verify(_ regKey: String, forName name: String) -> Bool {
-    do {
-      let keyString = regKey.cocoaFobFromReadableKey()
-      guard let keyData = keyString.data(using: String.Encoding.utf8) else { return false }
-      guard let nameData = name.data(using: String.Encoding.utf8) else { return false }
-      let decoder = try getDecoder(keyData)
-      let signature = try cfTry(.error) { SecTransformExecute(decoder, $0) }
+    public func verify(_ regKey: String, forName name: String) -> Bool {
+        let keyString = regKey.cocoaFobFromReadableKey()
+        guard let nameData = name.data(using: String.Encoding.utf8) else { return false }
 
-      // reverse the signature to check for truncated data / additional data entered by the user
-      let encoder = try getEncoder(signature as! Data)
-      let reverseSignature = try cfTry(.error) { SecTransformExecute(encoder, $0) }
-      let reverseSignatureString = String(decoding: reverseSignature as! Data, as: UTF8.self).replacingOccurrences(of: "=", with: "")
-      if(reverseSignatureString != keyString) { return false }
+        // Decode base32 signature
+        guard let signature = base32DecodeToData(keyString) else { return false }
 
-      let verifier = try getVerifier(self.pubKey, signature: signature as! Data, nameData: nameData)
-      let result = try cfTry(.error) { SecTransformExecute(verifier, $0) }
-      let boolResult = result as! CFBoolean
-      return Bool(truncating: boolResult)
-    } catch {
-      return false
+        // Verify signature using SecKeyVerifySignature
+        let algorithm: SecKeyAlgorithm = .ecdsaSignatureMessageX962SHA256
+        guard SecKeyIsAlgorithmSupported(pubKey, .verify, algorithm) else {
+            return false
+        }
+
+        var error: Unmanaged<CFError>?
+        let isValid = SecKeyVerifySignature(
+            pubKey,
+            algorithm,
+            nameData as CFData,
+            signature as CFData,
+            &error
+        )
+        return isValid
     }
-  }
-  
-  // MARK: - Helper functions
-  fileprivate func getEncoder(_ signature: Data) throws -> SecTransform {
-    let encoder = try cfTry(.error) { return SecEncodeTransformCreate(kSecBase32Encoding, $0) }
-    let _ = try cfTry(.error) { return SecTransformSetAttribute(encoder, kSecTransformInputAttributeName, signature as CFTypeRef, $0) }
-    return encoder
-  }
-  
-  fileprivate func getDecoder(_ keyData: Data) throws -> SecTransform {
-    let decoder = try cfTry(.error) { return SecDecodeTransformCreate(kSecBase32Encoding, $0) }
-    let _ = try cfTry(.error) { return SecTransformSetAttribute(decoder, kSecTransformInputAttributeName, keyData as CFTypeRef, $0) }
-    return decoder
-  }
-  
-  fileprivate func getVerifier(_ publicKey: SecKey, signature: Data, nameData: Data) throws -> SecTransform {
-    let verifier = try cfTry(.error) { return SecVerifyTransformCreate(publicKey, signature as CFData?, $0) }
-    let _ = try cfTry(.error) { return SecTransformSetAttribute(verifier, kSecTransformInputAttributeName, nameData as CFTypeRef, $0) }
-    let _ = try cfTry(.error) { return SecTransformSetAttribute(verifier, kSecDigestTypeAttribute, kSecDigestSHA1, $0) }
-    return verifier
-  }
-  
+
+    // MARK: - Helper functions
+    fileprivate func getDecoder(_ keyData: Data) throws -> SecTransform {
+        let decoder = try cfTry(.error) { return SecDecodeTransformCreate(kSecBase32Encoding, $0) }
+        let _ = try cfTry(.error) {
+            return SecTransformSetAttribute(
+                decoder,
+                kSecTransformInputAttributeName,
+                keyData as CFTypeRef,
+                $0
+            )
+        }
+        return decoder
+    }
+
 }

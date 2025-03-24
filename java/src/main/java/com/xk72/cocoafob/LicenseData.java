@@ -11,7 +11,7 @@ public class LicenseData {
 	protected String productCode;
 	protected String name;
 	protected String email;
-	
+
 	protected LicenseData() {
 		super();
 	}
@@ -52,7 +52,7 @@ public class LicenseData {
 	public void setEmail(String email) {
 		this.email = email;
 	}
-	
+
 	/**
 	 * Returns the string data input for the CocoaFob algorithm. This implementation returns a comma separated string
 	 * including the {@link #productCode}, {@link #name} and {@link #email} if set.
@@ -69,5 +69,5 @@ public class LicenseData {
 		}
 		return result.toString();
 	}
-	
+
 }

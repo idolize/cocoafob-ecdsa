@@ -8,8 +8,8 @@
 
 import Foundation
 
-let pubKey = StringOption(longFlag: "pubkey", helpMessage: "Public DSA key file path to verify registration")
-let pvtKey = StringOption(longFlag: "pvtkey", helpMessage: "Private DSA key file path to generate registration")
+let pubKey = StringOption(longFlag: "pubkey", helpMessage: "Public ECDSA key file path to verify registration")
+let pvtKey = StringOption(longFlag: "pvtkey", helpMessage: "Private ECDSA key file path to generate registration")
 let userName = StringOption(shortFlag: "u", longFlag: "username", helpMessage: "User name")
 let regKey = StringOption(shortFlag: "r", longFlag: "regkey", helpMessage: "Registration key to verify")
 let urlSchema = StringOption(longFlag: "schema", helpMessage: "URL schema for registration links (if given a URL will be generated)")

@@ -14,11 +14,11 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.interfaces.DSAPrivateKey;
-import java.security.interfaces.DSAPublicKey;
 
 import org.apache.commons.codec.binary.Base32;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.provider.JCEECPrivateKey;
+import org.bouncycastle.jce.provider.JCEECPublicKey;
 import org.bouncycastle.openssl.PEMReader;
 
 /**
@@ -28,8 +28,8 @@ import org.bouncycastle.openssl.PEMReader;
  */
 public class LicenseGenerator {
 	
-	private DSAPrivateKey privateKey;
-	private DSAPublicKey publicKey;
+	private JCEECPrivateKey privateKey;
+	private JCEECPublicKey publicKey;
 	private SecureRandom random;
 	
 	static {
@@ -57,8 +57,7 @@ public class LicenseGenerator {
 	 * Construct the LicenseGenerator with an InputStream of either the private key or public key.
 	 * Pass the private key for making and verifying licenses. Pass the public key for verifying only.
 	 * If you this code will go onto a user's machine you MUST NOT include the private key, only include
-	 * the public key in this case. 
-	 * @param keyURL
+	 * the public key in this case.
 	 * @throws IOException
 	 */
 	public LicenseGenerator(InputStream keyInputStream) throws IOException {
@@ -70,10 +69,10 @@ public class LicenseGenerator {
 		Object readKey = readKey(keyInputStream);
 		if (readKey instanceof KeyPair) {
 			KeyPair keyPair = (KeyPair) readKey;
-			privateKey = (DSAPrivateKey) keyPair.getPrivate();
-			publicKey = (DSAPublicKey) keyPair.getPublic();
-		} else if (readKey instanceof DSAPublicKey) {
-			publicKey = (DSAPublicKey) readKey;
+			privateKey = (JCEECPrivateKey) keyPair.getPrivate();
+			publicKey = (JCEECPublicKey) keyPair.getPublic();
+		} else if (readKey instanceof JCEECPublicKey) {
+			publicKey = (JCEECPublicKey) readKey;
 		} else {
 			throw new IllegalArgumentException("The supplied key stream didn't contain a public or private key: " + readKey.getClass());
 		}
@@ -103,8 +102,8 @@ public class LicenseGenerator {
 		final String stringData = licenseData.toLicenseStringData();
 		
 		try {
-			final Signature dsa = Signature.getInstance("SHA1withDSA", "SUN");
-			dsa.initSign(privateKey, random);
+			final Signature dsa = Signature.getInstance("SHA256withECDSA", "BC");
+			dsa.initSign(privateKey);
 			dsa.update(stringData.getBytes("UTF-8"));
 			
 			final byte[] signed = dsa.sign();
@@ -162,7 +161,7 @@ public class LicenseGenerator {
 		
 		byte[] decoded = new Base32().decode(licenseSignature);
 		try {
-			Signature dsa = Signature.getInstance("SHA1withDSA", "SUN");
+			Signature dsa = Signature.getInstance("SHA256withECDSA", "BC");
 			dsa.initVerify(publicKey);
 			dsa.update(stringData.getBytes("UTF-8"));
 			return dsa.verify(decoded);
