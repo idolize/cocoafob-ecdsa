@@ -71,13 +71,12 @@ public class LicenseGeneratorTest {
 	}
 	
 	@Test
-	@Ignore
 	public void testFailedVerifyLicense() throws IOException, IllegalStateException, LicenseGeneratorException {
 		LicenseGenerator lg = new LicenseGenerator(getClass().getResource("privkey.pem"));
 		LicenseData licenseData = new LicenseData("Test", "Karl");
-		Assert.assertTrue(lg.verifyLicense(licenseData, "GAWQE-F9AVF-8YSF3-NBDUH-C6M2J-JYAYC-X692H-H65KR-A9KAQ-R9SB7-A374H-T6AH3-87TAB-CVV6K-SKUGG-A"));
-		Assert.assertFalse(lg.verifyLicense(licenseData, "GAWQE-F9AVF-8YSF3-NBDUH-C6M2J-JYAYC-X692H-H65KR-A9KAQ-R9SB7-A374H-T6AH3-87TAB-CVV6K-SKAGG-A"));
-		Assert.assertFalse(lg.verifyLicense(licenseData, "GAWQE-F9AVF-8YSF3-NBDUH-C6M2J-JYAYC-X692H-H65KR-A9KAQ-R9SB7-A374H-T6AH3-87TAB-DVV6K-SKUGG-A"));
+		Assert.assertTrue(lg.verifyLicense(licenseData, "MEUCIDhwGNouEihL65lgDP0Eia3FveC48NrGn04/GNyXOt/SAiEA2/AWtfDQqvyU3l07fcHnONhh06Cj8gG7fBsxJ7lGBzk="));
+		Assert.assertFalse(lg.verifyLicense(licenseData, "MEUCIDhwGNouEihL65lgDP0Eia3FveC48NrGn04/GNyXOt/SAiEA2/AWtfDQqvyU3l07fcHnONhh06Cj8gG7fBsxJ7lGBza="));
+		Assert.assertFalse(lg.verifyLicense(licenseData, "MEUCIDhwGNouEihL65lgDP0Eia3FveC48NrGn04/GNyXOt/SAiEA2/AWtfDQqvyU3l07fcHnONhh06Cj8gG7fBsxB7lGBzk="));
 	}
 	
 }

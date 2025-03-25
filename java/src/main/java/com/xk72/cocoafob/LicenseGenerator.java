@@ -10,12 +10,11 @@ import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.util.Base64;
 
-import org.apache.commons.codec.binary.Base32;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.provider.JCEECPrivateKey;
 import org.bouncycastle.jce.provider.JCEECPublicKey;
@@ -30,15 +29,12 @@ public class LicenseGenerator {
 	
 	private JCEECPrivateKey privateKey;
 	private JCEECPublicKey publicKey;
-	private SecureRandom random;
-	
+
 	static {
 		Security.addProvider(new BouncyCastleProvider());
 	}
 	
-	protected LicenseGenerator() {
-		random = new SecureRandom();
-	}
+	protected LicenseGenerator() {}
 	
 	/**
 	 * Construct the LicenseGenerator with a URL that points to either the private key or public key.
@@ -108,18 +104,9 @@ public class LicenseGenerator {
 			
 			final byte[] signed = dsa.sign();
 			
-			/* base 32 encode the signature */
-			String result = new Base32().encodeAsString(signed);
-			
-			/* replace O with 8 and I with 9 */
-			result = result.replace("O", "8").replace("I",  "9");
-			
-			/* remove padding if any. */
-			result = result.replace("=", "");
-			
-			/* chunk with dashes */
-			result = split(result, 5);
-			return result;
+			/* base 64 encode the signature */
+			byte[] encodedBytes = Base64.getEncoder().encode(signed);
+			return new String(encodedBytes);
 		} catch (NoSuchAlgorithmException e) {
 			throw new LicenseGeneratorException(e);
 		} catch (NoSuchProviderException e) {
@@ -147,19 +134,8 @@ public class LicenseGenerator {
 		}
 		
 		final String stringData = licenseData.toLicenseStringData();
-		
-		/* replace O with 8 and I with 9 */
-		String licenseSignature = license.replace("8", "O").replace("9", "I");
-		
-		/* remove dashes */
-		licenseSignature = licenseSignature.replace("-", "");
-		
-		/* Pad the output length to a multiple of 8 with '=' characters */
-		while (licenseSignature.length() % 8 != 0) {
-			licenseSignature += "=";
-		}
-		
-		byte[] decoded = new Base32().decode(licenseSignature);
+		byte[] decoded = Base64.getDecoder().decode(license.getBytes());
+
 		try {
 			Signature dsa = Signature.getInstance("SHA256withECDSA", "BC");
 			dsa.initVerify(publicKey);
@@ -176,20 +152,6 @@ public class LicenseGenerator {
 		} catch (UnsupportedEncodingException e) {
 			throw new LicenseGeneratorException(e);
 		}
-	}
-
-	private String split(String str, int chunkSize) {
-		StringBuilder result = new StringBuilder();
-		int i = 0;
-		while (i < str.length()) {
-			if (i > 0) {
-				result.append('-');
-			}
-			int next = Math.min(i + chunkSize, str.length());
-			result.append(str.substring(i, next));
-			i = next;
-		}
-		return result.toString();
 	}
 	
 	public boolean isCanMakeLicenses() {

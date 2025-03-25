@@ -55,23 +55,6 @@ class CocoaFobTests: XCTestCase {
         }
     }
 
-    func testToReadableKeyPass() {
-        let unreadable =
-            "GAWAEFCDW3KH4IP5E2DHKUHPQPN5P52V43SVGDYCCRS64XXNRYBBCT44EOGM3SKYV4272LQ6LQ======"
-        let expected =
-            "GAWAE-FCDW3-KH49P-5E2DH-KUHPQ-PN5P5-2V43S-VGDYC-CRS64-XXNRY-BBCT4-4E8GM-3SKYV-4272L-Q6LQ"
-        let actual = unreadable.cocoaFobToReadableKey()
-        XCTAssertEqual(actual, expected)
-    }
-
-    func testFromReadableKeyPass() {
-        let readable =
-            "GAWAE-FCDW3-KH49P-5E2DH-KUHPQ-PN5P5-2V43S-VGDYC-CRS64-XXNRY-BBCT4-4E8GM-3SKYV-4272L-Q6LQ"
-        let expected = "GAWAEFCDW3KH4IP5E2DHKUHPQPN5P52V43SVGDYCCRS64XXNRYBBCT44EOGM3SKYV4272LQ6LQ"
-        let actual = readable.cocoaFobFromReadableKey()
-        XCTAssertEqual(actual, expected)
-    }
-
     func testGeneratePass() {
         let keygen = LicenseGenerator(privateKeyPEM: privateKeyPEM)
         XCTAssertNotNil(keygen?.privKey)
@@ -101,7 +84,7 @@ class CocoaFobTests: XCTestCase {
         XCTAssertNotNil(verifier?.pubKey)
         let name = "Joe Bloggs"
         let regKey =
-            "GBDAE-99AQE-Y5L5G-FXBNS-N6Q4A-XYKUZ-CVWP2-N2CQ9-A9FRV-D8XNZ-X4FFH-JH7YQ-E99A5-YUTFR-UAH4L-GG5B5-HNM8S-SZAMT-NNDMP-JADT4-LW9Z5-PYNTA-4X8YT-Q"
+            "MEYCIQD55PlsLnMFD7DcVSJ6rbPmRpbF450SX5nizR8NBt3wAQIhAPma+XJjOpHC87Rp1C+m8Lr01PXm5QGj+vQhwDBwX+t7"
         let result = verifier?.verify(regKey, forName: name) ?? false
         XCTAssertTrue(result)
     }
@@ -111,7 +94,7 @@ class CocoaFobTests: XCTestCase {
         XCTAssertNotNil(verifier?.pubKey)
         let name = "Joe Bloggs II"
         let regKey =
-            "GBDAE-99AQE-Y5L5G-FXBNS-N6Q4A-XYKUZ-CVWP2-N2CQ9-A9FRV-D8XNZ-X4FFH-JH7YQ-E99A5-YUTFR-UAH4L-GG5B5-HNM8S-SZAMT-NNDMP-JADT4-LW9Z5-PYNTA-4X8YT-Q"
+            "MEYCIQD55PlsLnMFD7DcVSJ6rbPmRpbF450SX5nizR8NBt3wAQIhAPma+XJjOpHC87Rp1C+m8Lr01PXm5QGj+vQhwDBwX+t7"
         let result = verifier?.verify(regKey, forName: name) ?? false
         XCTAssertFalse(result)
     }
@@ -148,7 +131,7 @@ class CocoaFobTests: XCTestCase {
         XCTAssertNotNil(verifier?.pubKey)
         let name = ""
         let regKey =
-            "GAWQE-F9AQP-XJCCL-PAFAX-NU5XX-EUG6W-KLT3H-VTEB9-A9KHJ-8DZ5R-DL74G-TU4BN-7ATPY-3N4XB-V4V27-Q"
+            "MEYCIQD55PlsLnMFD7DcVSJ6rbPmRpbF450SX5nizR8NBt3wAQIhAPma+XJjOpHC87Rp1C+m8Lr01PXm5QGj+vQhwDBwX+t7"
         let result = verifier?.verify(regKey, forName: name) ?? false
         XCTAssertFalse(result)
     }
@@ -175,7 +158,7 @@ class CocoaFobTests: XCTestCase {
         XCTAssertNotNil(verifier?.pubKey)
         let name = "Joe Bloggs"
         let regKey =
-            "GAWQE-F9AQP-XJCCL-PAFAX-NU5XX-EUG6W-KLT3H-VTEB9-A9KHJ-8DZ5R-DL74G-TU4BN-7ATPY-3N4XB-V4V27-Qasdf"
+            "MEYCIQD55PlsLnMFD7DcVSJ6rbPmRpbF450SX5nizR8NBt3wAQIhAPma+XJjOpHC87Rp1C+m8Lr01PXm5QGj+vQhwDBwX+t7XX"
         let result = verifier?.verify(regKey, forName: name) ?? false
         XCTAssertFalse(result)
     }
@@ -185,19 +168,8 @@ class CocoaFobTests: XCTestCase {
         XCTAssertNotNil(verifier?.pubKey)
         let name = "Joe Bloggs"
         let regKey =
-            "qwertGAWQE-F9AQP-XJCCL-PAFAX-NU5XX-EUG6W-KLT3H-VTEB9-A9KHJ-8DZ5R-DL74G-TU4BN-7ATPY-3N4XB-V4V27-Q"
+            "XXMEYCIQD55PlsLnMFD7DcVSJ6rbPmRpbF450SX5nizR8NBt3wAQIhAPma+XJjOpHC87Rp1C+m8Lr01PXm5QGj+vQhwDBwX+t7"
         let result = verifier?.verify(regKey, forName: name) ?? false
         XCTAssertFalse(result)
     }
-
-    func testVerifyWhitespaceInMiddleFails() {
-        let verifier = LicenseVerifier(publicKeyPEM: publicKeyPEM)
-        XCTAssertNotNil(verifier?.pubKey)
-        let name = "Joe Bloggs"
-        let regKey =
-            "GAWQE-F9AQP- XJCCL-PAFAX-NU5XX - EUG6W-KLT3H-VTEB9\n-A9KHJ-8DZ5R- DL74G-\tTU4BN-7ATPY-3N4XB-V4V27-Q"
-        let result = verifier?.verify(regKey, forName: name) ?? false
-        XCTAssertFalse(result)
-    }
-
 }

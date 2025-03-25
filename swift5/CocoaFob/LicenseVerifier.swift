@@ -6,7 +6,6 @@
 //  Copyright © 2015 PixelEspresso. All rights reserved.
 //
 
-import Base32
 import Foundation
 import Security
 
@@ -62,9 +61,10 @@ public struct LicenseVerifier {
             }
         )
         guard osStatus == errSecSuccess,
-              let importArray = importArray,
-              let items = importArray as? [SecKey],
-              let firstKey = items.first else { return nil }
+            let importArray = importArray,
+            let items = importArray as? [SecKey],
+            let firstKey = items.first
+        else { return nil }
         self.pubKey = firstKey
     }
 
@@ -76,11 +76,10 @@ public struct LicenseVerifier {
   - returns: `true` if the registration key is valid for the given name, `false` if not
   */
     public func verify(_ regKey: String, forName name: String) -> Bool {
-        let keyString = regKey.cocoaFobFromReadableKey()
-        guard let nameData = name.data(using: String.Encoding.utf8) else { return false }
+        guard let nameData = name.data(using: .utf8) else { return false }
 
-        // Decode base32 signature
-        guard let signature = base32DecodeToData(keyString) else { return false }
+        // Decode base64 signature
+        guard let signature = Data(base64Encoded: regKey) else { return false }
 
         // Verify signature using SecKeyVerifySignature
         let algorithm: SecKeyAlgorithm = .ecdsaSignatureMessageX962SHA256

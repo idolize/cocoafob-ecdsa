@@ -6,7 +6,6 @@
 //  Copyright © 2015 PixelEspresso. All rights reserved.
 //
 
-import Base32
 import Foundation
 import Security
 
@@ -62,9 +61,10 @@ public struct LicenseGenerator {
             }
         )
         guard osStatus == errSecSuccess,
-              let importArray = importArray,
-              let items = importArray as? [SecKey],
-              let firstKey = items.first else { return nil }
+            let importArray = importArray,
+            let items = importArray as? [SecKey],
+            let firstKey = items.first
+        else { return nil }
         self.privKey = firstKey
     }
 
@@ -87,13 +87,15 @@ public struct LicenseGenerator {
         }
 
         var error: Unmanaged<CFError>?
-        guard let signature = SecKeyCreateSignature(privKey, algorithm, nameData as CFData, &error) as Data? else {
+        guard
+            let signature = SecKeyCreateSignature(privKey, algorithm, nameData as CFData, &error)
+                as Data?
+        else {
             throw CocoaFobError.error
         }
 
-        // Encode signature to base32
-        let base32String = base32Encode(signature)
-        return base32String.cocoaFobToReadableKey()
+        // Encode signature to base64
+        return signature.base64EncodedString()
     }
 
     // MARK: - Utility functions
